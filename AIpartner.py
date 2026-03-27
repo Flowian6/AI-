@@ -66,7 +66,7 @@ def switch_to_session(session_name):
 
 # 删除指定会话函数 - Streamlit Cloud 版本
 def delete_session(session_name):
-    """删除指定会话，并创建新会话或切换到其他会话"""
+    """删除指定会话，并切换到其他会话或清空状态"""
     if session_name in st.session_state.user_sessions:
         # 从用户会话列表中删除
         del st.session_state.user_sessions[session_name]
@@ -74,15 +74,19 @@ def delete_session(session_name):
         # 保存到本地存储
         save_to_local_storage()
         
-        # 如果删除的是当前会话，则创建新的空会话
+        # 如果删除的是当前会话
         if session_name == st.session_state.current_session:
-            # 尝试切换到第一个可用会话，或者创建新会话
+            # 尝试切换到第一个可用会话
             remaining_sessions = list(st.session_state.user_sessions.keys())
             if remaining_sessions:
                 switch_to_session(remaining_sessions[0])
             else:
-                # 没有任何会话了，创建默认会话
-                create_new_session("新会话", "", "")
+                # 没有任何会话了，清空当前会话状态
+                st.session_state.current_session = None
+                st.session_state.session_name = None
+                st.session_state.name = None
+                st.session_state.nature = None
+                st.session_state.messages = []
 
 
 #初始化client
