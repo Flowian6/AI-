@@ -3,6 +3,7 @@ import os
 from openai import OpenAI
 from datetime import datetime
 import json
+from streamlit_local_storage import LocalStorage
 
 #设置页面配置
 st.set_page_config(
@@ -19,32 +20,73 @@ st.set_page_config(
     }
 )
 
-# 保存会话信息函数 - Streamlit Cloud 版本（仅内存存储）
-def save_session():
-    # 在 Streamlit Cloud 上，只保存在内存中，每个用户会话独立
-    # 不需要写入文件系统，避免用户间共享数据
-    pass  # st.session_state 会自动保持状态
+# 初始化用户的所有会话存储 - Streamlit Cloud 版本（带持久化）
+def init_user_sessions():
+    """初始化用户的会话列表，从浏览器本地存储加载数据"""
+    # 初始化本地存储
+    localStorage = LocalStorage()
+    
+    # 尝试从本地存储加载用户会话
+    saved_sessions = localStorage.getItem("user_sessions")
+    
+    if saved_sessions:
+        # 如果本地存储有数据，加载到 session_state
+        st.session_state.user_sessions = saved_sessions
+    else:
+        # 如果是第一次访问，创建空的会话字典
+        if "user_sessions" not in st.session_state:
+            st.session_state.user_sessions = {}
+    
+    # 当前选中的会话名称
+    if "current_session" not in st.session_state:
+        st.session_state.current_session = None
 
-# 加载所有会话列表函数 - Streamlit Cloud 版本
+# 保存到浏览器本地存储函数
+def save_to_local_storage():
+    """将会话数据保存到浏览器本地存储，实现持久化"""
+    localStorage = LocalStorage()
+    localStorage.setItem("user_sessions", st.session_state.user_sessions)
+
+# 获取所有会话列表函数 - Streamlit Cloud 版本
 def load_sessions():
-    # 在 Streamlit Cloud 上，每个用户会话是独立的
-    # 只返回当前会话，不显示历史会话列表
-    if st.session_state.session_name:
-        return [st.session_state.session_name]
-    return []
+    """返回当前用户的所有会话名称列表"""
+    return list(st.session_state.user_sessions.keys())
 
-# 加载指定会话函数 - Streamlit Cloud 版本（无需实现）
-def load_session(session_name):
-    # 在 Streamlit Cloud 上，每个用户会话天然独立，不需要从文件加载
-    pass
+def load_sessions():
+    """返回当前用户的所有会话名称列表"""
+    return list(st.session_state.user_sessions.keys())
+
+# 切换到指定会话函数 - Streamlit Cloud 版本
+def switch_to_session(session_name):
+    """切换到指定会话，从内存中加载会话数据到 session_state"""
+    if session_name in st.session_state.user_sessions:
+        session_data = st.session_state.user_sessions[session_name]
+        st.session_state.name = session_data["name"]
+        st.session_state.nature = session_data["nature"]
+        st.session_state.messages = session_data["messages"]
+        st.session_state.session_name = session_name
+        st.session_state.current_session = session_name
+        # 切换会话后不需要立即保存，只在数据变更时保存
 
 # 删除指定会话函数 - Streamlit Cloud 版本
 def delete_session(session_name):
-    # 在 Streamlit Cloud 上，重置当前会话即可
-    st.session_state.messages = []
-    st.session_state.name = ""
-    st.session_state.nature = ""
-    st.session_state.session_name = "新会话"
+    """删除指定会话，并创建新会话或切换到其他会话"""
+    if session_name in st.session_state.user_sessions:
+        # 从用户会话列表中删除
+        del st.session_state.user_sessions[session_name]
+        
+        # 保存到本地存储
+        save_to_local_storage()
+        
+        # 如果删除的是当前会话，则创建新的空会话
+        if session_name == st.session_state.current_session:
+            # 尝试切换到第一个可用会话，或者创建新会话
+            remaining_sessions = list(st.session_state.user_sessions.keys())
+            if remaining_sessions:
+                switch_to_session(remaining_sessions[0])
+            else:
+                # 没有任何会话了，创建默认会话
+                create_new_session("新会话", "", "")
 
 
 #初始化client
@@ -52,24 +94,35 @@ client = OpenAI(
         api_key=os.environ.get('DEEPSEEK_API_KEY'),
         base_url="https://api.deepseek.com")
 
-#初始化角色名称
-if "name" not in st.session_state:
-    st.session_state.name = ""
+# 创建新会话函数
+def create_new_session(session_name, name, nature):
+    """创建一个新的会话并切换到该会话"""
+    # 保存到用户会话列表
+    st.session_state.user_sessions[session_name] = {
+        "name": name,
+        "nature": nature,
+        "messages": []
+    }
+    # 切换到新创建的会话
+    switch_to_session(session_name)
+    # 保存到新创建的会话到本地存储
+    save_to_local_storage()
 
-#初始化角色性格
-if "nature" not in st.session_state:
-    st.session_state.nature = ""
+# 初始化用户会话系统
+init_user_sessions()
 
-#初始化聊天信息
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# 如果没有会话，创建一个默认会话
+if not st.session_state.user_sessions:
+    create_new_session("新会话", "", "")
 
-#会话标识
-if "session_name" not in st.session_state:
-    if st.session_state.name and st.session_state.nature:
-        st.session_state.session_name = f"{st.session_state.name} - {st.session_state.nature}"
+# 确保当前会话存在
+if st.session_state.current_session not in st.session_state.user_sessions:
+    if st.session_state.user_sessions:
+        # 切换到第一个会话
+        switch_to_session(list(st.session_state.user_sessions.keys())[0])
     else:
-        st.session_state.session_name = "新会话"
+        # 创建默认会话
+        create_new_session("新会话", "", "")
 
 
 #系统提示词
@@ -93,12 +146,53 @@ st.title("AI智能伴侣")
 with (st.sidebar):
     # 显示当前会话信息
     st.subheader("当前会话")
-    st.write(f"会话：{st.session_state.session_name}")
+    st.write(f"📍 {st.session_state.session_name}")
     
-    # 清空会话按钮
-    if st.button("清空当前会话", width="stretch", icon='🗑️', key='clear_session'):
+    # 清空当前会话消息按钮
+    if st.button("清空消息", width="stretch", icon='🗑️', key='clear_messages'):
         st.session_state.messages = []
+        # 更新存储的会话数据
+        st.session_state.user_sessions[st.session_state.session_name]["messages"] = []
+        # 保存到本地存储
+        save_to_local_storage()
         st.rerun()
+    
+    #分隔线
+    st.divider()
+    
+    # 历史会话列表
+    st.subheader("我的会话")
+    sessions = load_sessions()
+    
+    for session_name in sessions:
+        # 判断是否是当前会话
+        is_current = session_name == st.session_state.current_session
+        
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            # 切换会话按钮
+            button_type = "primary" if is_current else "secondary"
+            if st.button(
+                session_name,
+                width="stretch",
+                icon='💬' if is_current else '📄',
+                key=f'load_{session_name}',
+                type=button_type
+            ):
+                if not is_current:
+                    switch_to_session(session_name)
+                    st.rerun()
+        
+        with col2:
+            # 删除会话按钮
+            if st.button(
+                "",
+                width="stretch",
+                icon='❌',
+                key=f'delete_{session_name}'
+            ):
+                delete_session(session_name)
+                st.rerun()
     
     #分隔线
     st.divider()
@@ -119,12 +213,18 @@ with (st.sidebar):
     # 新建伴侣按钮
     if st.button("新建伴侣", width="stretch", icon='✨', key='update_name'):
         if st.session_state.name and st.session_state.nature:
-            # 清空聊天记录，创建新对话
-            st.session_state.messages = []
-            # 更新会话名称
-            st.session_state.session_name = f"{st.session_state.name} - {st.session_state.nature}"
-            # 不需要保存到文件，内存存储即可
-            st.success(f"已创建新伴侣：{st.session_state.session_name}")
+            # 生成会话名称
+            new_session_name = f"{st.session_state.name} - {st.session_state.nature}"
+            
+            # 检查是否已存在同名会话
+            if new_session_name in st.session_state.user_sessions:
+                # 如果已存在，切换到该会话
+                switch_to_session(new_session_name)
+                st.info(f"已切换到伴侣：{new_session_name}")
+            else:
+                # 创建新会话
+                create_new_session(new_session_name, st.session_state.name, st.session_state.nature)
+                st.success(f"已创建新伴侣：{new_session_name}")
             st.rerun()
         else:
             st.error("请输入完整的名称和性格！")
@@ -170,4 +270,8 @@ if prompt:
     #保存大模型返回的答案
     st.session_state.messages.append({"role": "assistant", "content": full_response})
 
-    # 在 Streamlit Cloud 上，st.session_state 会自动保持状态，无需保存到文件
+    # 更新存储的会话数据（同步到用户会话列表）
+    if st.session_state.session_name in st.session_state.user_sessions:
+        st.session_state.user_sessions[st.session_state.session_name]["messages"] = st.session_state.messages
+        # 保存到浏览器本地存储（每次对话后都保存）
+        save_to_local_storage()
