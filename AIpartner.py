@@ -16,7 +16,7 @@ st.set_page_config(
     menu_items={
         'Get Help': 'https://www.extremelycoolapp.com/help',
         'Report a bug': "https://www.extremelycoolapp.com/bug",
-        'About': "#这是超级无敌帅气的许楗豪做的！他真是太厉害了哈哈哈哈哈哈哈！"
+        'About': "这是超级无敌帅气的许楗豪花了一个月做的超级无敌好用的ai伴侣！他真是太厉害了哈哈哈哈哈哈哈！"
     }
 )
 
@@ -155,7 +155,8 @@ if not st.session_state.disclaimer_shown:
         - 禁止用于任何商业用途
         - 支持设定任意虚拟或现实中存在的人物
         - 欢迎反馈bug和建议（右上角）
-        - 因为烧的是我自己的token，有点费钱\n
+        - 埋了个小彩蛋大家可以找一下哈哈哈哈（有奖）
+        因为烧的是我自己的token，有点费钱\n
         如果大家玩的开心的话\n
         可以发点小红包支持我\n
         一分两分不嫌少，一块两块喊大佬\n
