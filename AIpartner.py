@@ -14,9 +14,9 @@ st.set_page_config(
     #侧边栏
     initial_sidebar_state="expanded",
     menu_items={
-        'Get Help': "https://streamlit.io/cloud",
+        'Get Help':  'https://www.extremelycoolapp.com/help',
         'Report a bug': "https://www.extremelycoolapp.com/bug",
-        'About': "打开侧边栏，输入角色与性格，点击新建会话就可以创建角色了，点击该角色就可以开始对话了,支持同时创建多个会话，也可以清空任意会话聊天记录或删除会话。这是超级无敌帅气的许楗豪花了一个月做的超级无敌好用的ai伴侣！他真是太厉害了哈哈哈哈哈哈哈！"
+        'About': "打开侧边栏，输入角色与性格，点击新建会话就可以创建角色了，点击该角色就可以开始对话了,支持同时创建多个会话，也可以清空任意会话聊天记录或删除会话。"
     }
 )
 
