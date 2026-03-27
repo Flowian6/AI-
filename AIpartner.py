@@ -249,7 +249,7 @@ col1, col2 = st.columns([6, 1])
 with col1:
     st.title("AI 智能伴侣")
 with col2:
-    st.markdown(" 📌 v1.13")
+    st.markdown(" 📌 v1.2")
 
 # 显示免责声明浮窗（仅首次访问时显示）
 if "disclaimer_shown" not in st.session_state:
@@ -279,7 +279,7 @@ if not st.session_state.disclaimer_shown:
         - 删除了初始空白会话
         - 修复了删除最后一个会话程序报错的问题
         
-        v1.13 更新公告：
+        v1.2 更新公告：
         - ✨ 新增 Bug 与建议反馈功能，欢迎在此反馈问题！
         - 📝 反馈留言昵称改为必填，方便大家交流
         - 🔧 优化反馈按钮位置，移至侧边栏底部
